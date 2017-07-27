@@ -1,23 +1,21 @@
-/*
-Package cors is net/http handler to handle CORS related requests
-as defined by http://www.w3.org/TR/cors/
-
-You can configure it by passing an option struct to cors.New:
-
-    c := cors.New(cors.Options{
-        AllowedOrigins: []string{"foo.com"},
-        AllowedMethods: []string{"GET", "POST", "DELETE"},
-        AllowCredentials: true,
-    })
-
-Then insert the handler in the chain:
-
-    handler = c.Handler(handler)
-
-See Options documentation for more options.
-
-The resulting handler is a standard net/http handler.
-*/
+// cors package is net/http handler to handle CORS related requests
+// as defined by http://www.w3.org/TR/cors/
+//
+// You can configure it by passing an option struct to cors.New:
+//
+//     c := cors.New(cors.Options{
+//         AllowedOrigins: []string{"foo.com"},
+//         AllowedMethods: []string{"GET", "POST", "DELETE"},
+//         AllowCredentials: true,
+//     })
+//
+// Then insert the handler in the chain:
+//
+//     handler = c.Handler(handler)
+//
+// See Options documentation for more options.
+//
+// The resulting handler is a standard net/http handler.
 package cors
 
 import (
@@ -41,7 +39,7 @@ type Options struct {
 	// AllowOriginFunc is a custom function to validate the origin. It take the origin
 	// as argument and returns true if allowed or false otherwise. If this option is
 	// set, the content of AllowedOrigins is ignored.
-	AllowOriginFunc func(origin string) bool
+	AllowOriginFunc func(r *http.Request, origin string) bool
 
 	// AllowedMethods is a list of methods the client is allowed to use with
 	// cross-domain requests. Default value is simple methods (GET and POST)
@@ -88,7 +86,7 @@ type Cors struct {
 	allowedWOrigins []wildcard
 
 	// Optional origin validator function
-	allowOriginFunc func(origin string) bool
+	allowOriginFunc func(r *http.Request, origin string) bool
 
 	// Set to true when allowed headers contains a "*"
 	allowedHeadersAll bool
@@ -253,7 +251,7 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 		c.logf("  Preflight aborted: empty origin")
 		return
 	}
-	if !c.isOriginAllowed(origin) {
+	if !c.isOriginAllowed(r, origin) {
 		c.logf("  Preflight aborted: origin '%s' not allowed", origin)
 		return
 	}
@@ -302,7 +300,7 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 		c.logf("  Actual request no headers added: missing origin")
 		return
 	}
-	if !c.isOriginAllowed(origin) {
+	if !c.isOriginAllowed(r, origin) {
 		c.logf("  Actual request no headers added: origin '%s' not allowed", origin)
 		return
 	}
@@ -338,9 +336,9 @@ func (c *Cors) logf(format string, a ...interface{}) {
 
 // isOriginAllowed checks if a given origin is allowed to perform cross-domain requests
 // on the endpoint
-func (c *Cors) isOriginAllowed(origin string) bool {
+func (c *Cors) isOriginAllowed(r *http.Request, origin string) bool {
 	if c.allowOriginFunc != nil {
-		return c.allowOriginFunc(origin)
+		return c.allowOriginFunc(r, origin)
 	}
 	if c.allowedOriginsAll {
 		return true
