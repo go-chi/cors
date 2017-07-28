@@ -237,7 +237,7 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 
 	if r.Method != "OPTIONS" {
-		c.logf("  Preflight aborted: %s!=OPTIONS", r.Method)
+		c.logf("Preflight aborted: %s!=OPTIONS", r.Method)
 		return
 	}
 	// Always set Vary headers
@@ -248,22 +248,22 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	headers.Add("Vary", "Access-Control-Request-Headers")
 
 	if origin == "" {
-		c.logf("  Preflight aborted: empty origin")
+		c.logf("Preflight aborted: empty origin")
 		return
 	}
 	if !c.isOriginAllowed(r, origin) {
-		c.logf("  Preflight aborted: origin '%s' not allowed", origin)
+		c.logf("Preflight aborted: origin '%s' not allowed", origin)
 		return
 	}
 
 	reqMethod := r.Header.Get("Access-Control-Request-Method")
 	if !c.isMethodAllowed(reqMethod) {
-		c.logf("  Preflight aborted: method '%s' not allowed", reqMethod)
+		c.logf("Preflight aborted: method '%s' not allowed", reqMethod)
 		return
 	}
 	reqHeaders := parseHeaderList(r.Header.Get("Access-Control-Request-Headers"))
 	if !c.areHeadersAllowed(reqHeaders) {
-		c.logf("  Preflight aborted: headers '%v' not allowed", reqHeaders)
+		c.logf("Preflight aborted: headers '%v' not allowed", reqHeaders)
 		return
 	}
 	headers.Set("Access-Control-Allow-Origin", origin)
@@ -282,7 +282,7 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	if c.maxAge > 0 {
 		headers.Set("Access-Control-Max-Age", strconv.Itoa(c.maxAge))
 	}
-	c.logf("  Preflight response headers: %v", headers)
+	c.logf("Preflight response headers: %v", headers)
 }
 
 // handleActualRequest handles simple cross-origin requests, actual request or redirects
@@ -291,17 +291,17 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 
 	if r.Method == "OPTIONS" {
-		c.logf("  Actual request no headers added: method == %s", r.Method)
+		c.logf("Actual request no headers added: method == %s", r.Method)
 		return
 	}
 	// Always set Vary, see https://github.com/rs/cors/issues/10
 	headers.Add("Vary", "Origin")
 	if origin == "" {
-		c.logf("  Actual request no headers added: missing origin")
+		c.logf("Actual request no headers added: missing origin")
 		return
 	}
 	if !c.isOriginAllowed(r, origin) {
-		c.logf("  Actual request no headers added: origin '%s' not allowed", origin)
+		c.logf("Actual request no headers added: origin '%s' not allowed", origin)
 		return
 	}
 
@@ -311,7 +311,7 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 	// We think it's a nice feature to be able to have control on those methods though.
 	if !c.isMethodAllowed(r.Method) {
 		if c.log != nil {
-			c.logf("  Actual request no headers added: method '%s' not allowed",
+			c.logf("Actual request no headers added: method '%s' not allowed",
 				r.Method)
 		}
 
@@ -324,7 +324,7 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 	if c.allowCredentials {
 		headers.Set("Access-Control-Allow-Credentials", "true")
 	}
-	c.logf("  Actual response added headers: %v", headers)
+	c.logf("Actual response added headers: %v", headers)
 }
 
 // convenience method. checks if debugging is turned on before printing
