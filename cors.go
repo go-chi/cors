@@ -236,7 +236,7 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 		c.logf("Preflight aborted: headers '%v' not allowed", reqHeaders)
 		return
 	}
-	headers.Set("Access-Control-Allow-Origin", origin)
+	headers.Set("Access-Control-Allow-Origin", c.FetchOrigin(origin))
 	// Spec says: Since the list of methods can be unbounded, simply returning the method indicated
 	// by Access-Control-Request-Method (if supported) can be enough
 	headers.Set("Access-Control-Allow-Methods", strings.ToUpper(reqMethod))
@@ -287,7 +287,7 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-	headers.Set("Access-Control-Allow-Origin", origin)
+	headers.Set("Access-Control-Allow-Origin", c.FetchOrigin(origin))
 	if len(c.exposedHeaders) > 0 {
 		headers.Set("Access-Control-Expose-Headers", strings.Join(c.exposedHeaders, ", "))
 	}
@@ -302,6 +302,13 @@ func (c *Cors) logf(format string, a ...interface{}) {
 	if c.log != nil {
 		c.log.Printf(format, a...)
 	}
+}
+
+func (c *Cors) FetchOrigin(origin string) string {
+	if c.IsStar() {
+		return "*"
+	}
+	return origin
 }
 
 // isOriginAllowed checks if a given origin is allowed to perform cross-domain requests
@@ -325,6 +332,10 @@ func (c *Cors) isOriginAllowed(r *http.Request, origin string) bool {
 		}
 	}
 	return false
+}
+
+func (c *Cors) IsStar() bool {
+	return c.allowedOriginsAll
 }
 
 // isMethodAllowed checks if a given method can be used as part of a cross-domain request
