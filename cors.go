@@ -41,6 +41,10 @@ type Options struct {
 	// set, the content of AllowedOrigins is ignored.
 	AllowOriginFunc func(r *http.Request, origin string) bool
 
+	// LookupOriginFunc is a custom function to lookup the origin value. If this option is
+	// not set, the value of r.Header.Get("Origin") will be used
+	LookupOriginFunc func(r *http.Request) string
+
 	// AllowedMethods is a list of methods the client is allowed to use with
 	// cross-domain requests. Default value is simple methods (GET and POST)
 	AllowedMethods []string
@@ -88,6 +92,9 @@ type Cors struct {
 	// Optional origin validator function
 	allowOriginFunc func(r *http.Request, origin string) bool
 
+	// Option origin value lookup function
+	lookupOriginFunc func(r *http.Request) string
+
 	// Set to true when allowed headers contains a "*"
 	allowedHeadersAll bool
 
@@ -106,9 +113,10 @@ type Cors struct {
 
 // New creates a new Cors handler with the provided options.
 func New(options Options) *Cors {
+
 	c := &Cors{
 		exposedHeaders:    convert(options.ExposedHeaders, http.CanonicalHeaderKey),
-		allowOriginFunc:   options.AllowOriginFunc,
+		lookupOriginFunc:  options.LookupOriginFunc,
 		allowCredentials:  options.AllowCredentials,
 		maxAge:            options.MaxAge,
 		optionPassthrough: options.OptionsPassthrough,
@@ -171,6 +179,13 @@ func New(options Options) *Cors {
 		c.allowedMethods = convert(options.AllowedMethods, strings.ToUpper)
 	}
 
+	// Set a default origin lookup func, if not provided
+	if c.lookupOriginFunc == nil {
+		c.lookupOriginFunc = func(r *http.Request) string {
+			return r.Header.Get("Origin")
+		}
+	}
+
 	return c
 }
 
@@ -192,8 +207,6 @@ func (c *Cors) Handler(next http.Handler) http.Handler {
 			// headers (see #1)
 			if c.optionPassthrough {
 				next.ServeHTTP(w, r)
-			} else {
-				w.WriteHeader(http.StatusOK)
 			}
 		} else {
 			c.logf("Handler: Actual request")
@@ -206,7 +219,7 @@ func (c *Cors) Handler(next http.Handler) http.Handler {
 // handlePreflight handles pre-flight CORS requests
 func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	headers := w.Header()
-	origin := r.Header.Get("Origin")
+	origin := c.lookupOriginFunc(r)
 
 	if r.Method != "OPTIONS" {
 		c.logf("Preflight aborted: %s!=OPTIONS", r.Method)
@@ -260,7 +273,7 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 // handleActualRequest handles simple cross-origin requests, actual request or redirects
 func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 	headers := w.Header()
-	origin := r.Header.Get("Origin")
+	origin := c.lookupOriginFunc(r)
 
 	if r.Method == "OPTIONS" {
 		c.logf("Actual request no headers added: method == %s", r.Method)
