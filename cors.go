@@ -359,7 +359,7 @@ func (c *Cors) areHeadersAllowed(requestedHeaders []string) bool {
 		header = http.CanonicalHeaderKey(header)
 		found := false
 		for _, h := range c.allowedHeaders {
-			if h == header {
+			if strings.Index(header, h) == 0 {
 				found = true
 			}
 		}
