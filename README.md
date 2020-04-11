@@ -4,7 +4,7 @@
 provides a `net/http` compatible middleware for performing preflight CORS checks on the server side. These headers
 are required for using the browser native [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
 
-This middleware is designed to be used as a global middleware on the [chi](https://github.com/go-chi/chi) router.
+This middleware is designed to be used as a top-level middleware on the [chi](https://github.com/go-chi/chi) router.
 Applying with within a `r.Group()` or using `With()` will not work without routes matching `OPTIONS` added.
 
 ## Usage
@@ -22,7 +22,7 @@ func main() {
     AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
     AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
     ExposedHeaders:   []string{"Link"},
-    AllowCredentials: true,
+    AllowCredentials: false,
     MaxAge:           300, // Maximum value not ignored by any of major browsers
   })
   r.Use(cors.Handler)
@@ -35,3 +35,6 @@ func main() {
 }
 ```
 
+## Credits
+
+All credit for the original work of this middleware goes out to [github.com/rs](github.com/rs).
