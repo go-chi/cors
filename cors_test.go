@@ -141,22 +141,6 @@ func TestSpec(t *testing.T) {
 				"Vary": "Origin",
 			},
 		},
-		// {
-		// 	"AllowedOriginFuncMatch",
-		// 	Options{
-		// 		AllowOriginFunc: func(o string) bool {
-		// 			return regexp.MustCompile("^http://foo").MatchString(o)
-		// 		},
-		// 	},
-		// 	"GET",
-		// 	map[string]string{
-		// 		"Origin": "http://foobar.com",
-		// 	},
-		// 	map[string]string{
-		// 		"Vary":                        "Origin",
-		// 		"Access-Control-Allow-Origin": "http://foobar.com",
-		// 	},
-		// },
 		{
 			"AllowedOriginFuncMatch",
 			Options{

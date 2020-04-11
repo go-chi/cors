@@ -105,6 +105,7 @@ type Cors struct {
 
 	// Set to true when allowed headers contains a "*"
 	allowedHeadersAll bool
+
 	allowCredentials  bool
 	optionPassthrough bool
 }
