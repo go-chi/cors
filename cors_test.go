@@ -411,7 +411,7 @@ func TestDebug(t *testing.T) {
 }
 
 func TestDefault(t *testing.T) {
-	s := Default()
+	s := New(Options{})
 	if s.Log != nil {
 		t.Error("c.log should be nil when Default")
 	}
