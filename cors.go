@@ -202,7 +202,7 @@ func AllowAll() *Cors {
 			http.MethodDelete,
 		},
 		AllowedHeaders:   []string{"*"},
-		AllowCredentials: false,
+		AllowCredentials: true,
 	})
 }
 
