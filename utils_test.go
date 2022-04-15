@@ -32,19 +32,19 @@ func TestConvert(t *testing.T) {
 }
 
 func TestParseHeaderList(t *testing.T) {
-	h := parseHeaderList("header, second-header, THIRD-HEADER, Numb3r3d-H34d3r")
-	e := []string{"Header", "Second-Header", "Third-Header", "Numb3r3d-H34d3r"}
-	if h[0] != e[0] || h[1] != e[1] || h[2] != e[2] {
+	h := parseHeaderList("header, second-header, THIRD-HEADER, Numb3r3d-H34d3r, Header_with_underscore")
+	e := []string{"Header", "Second-Header", "Third-Header", "Numb3r3d-H34d3r", "Header_with_underscore"}
+	if h[0] != e[0] || h[1] != e[1] || h[2] != e[2] || h[3] != e[3] || h[4] != e[4] {
 		t.Errorf("%v != %v", h, e)
 	}
 }
 
 func TestParseHeaderListEmpty(t *testing.T) {
 	if len(parseHeaderList("")) != 0 {
-		t.Error("should be empty sclice")
+		t.Error("should be empty slice")
 	}
 	if len(parseHeaderList(" , ")) != 0 {
-		t.Error("should be empty sclice")
+		t.Error("should be empty slice")
 	}
 }
 
