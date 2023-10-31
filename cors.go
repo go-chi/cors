@@ -224,8 +224,10 @@ func (c *Cors) Handler(next http.Handler) http.Handler {
 			}
 		} else {
 			c.logf("Handler: Actual request")
-			c.handleActualRequest(w, r)
-			next.ServeHTTP(w, r)
+			ok := c.handleActualRequest(w, r)
+			if ok {
+				next.ServeHTTP(w, r)
+			}
 		}
 	})
 }
@@ -289,7 +291,7 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleActualRequest handles simple cross-origin requests, actual request or redirects
-func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
+func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) bool {
 	headers := w.Header()
 	origin := r.Header.Get("Origin")
 
@@ -297,11 +299,11 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 	headers.Add("Vary", "Origin")
 	if origin == "" {
 		c.logf("Actual request no headers added: missing origin")
-		return
+		return false
 	}
 	if !c.isOriginAllowed(r, origin) {
 		c.logf("Actual request no headers added: origin '%s' not allowed", origin)
-		return
+		return false
 	}
 
 	// Note that spec does define a way to specifically disallow a simple method like GET or
@@ -311,7 +313,7 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 	if !c.isMethodAllowed(r.Method) {
 		c.logf("Actual request no headers added: method '%s' not allowed", r.Method)
 
-		return
+		return false
 	}
 	if c.allowedOriginsAll {
 		headers.Set("Access-Control-Allow-Origin", "*")
@@ -325,6 +327,7 @@ func (c *Cors) handleActualRequest(w http.ResponseWriter, r *http.Request) {
 		headers.Set("Access-Control-Allow-Credentials", "true")
 	}
 	c.logf("Actual response added headers: %v", headers)
+	return true
 }
 
 // convenience method. checks if a logger is set.
