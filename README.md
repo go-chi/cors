@@ -40,4 +40,4 @@ func main() {
 
 ## Credits
 
-All credit for the original work of this middleware goes out to [github.com/rs](github.com/rs).
+All credit for the original work of this middleware goes out to [github.com/rs](https://github.com/rs).
