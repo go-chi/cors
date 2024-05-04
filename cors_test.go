@@ -1,6 +1,8 @@
 package cors
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -38,6 +40,41 @@ func assertResponse(t *testing.T, res *httptest.ResponseRecorder, responseCode i
 	}
 }
 
+func customErrorHandler(w http.ResponseWriter, _ *http.Request, cors Cors, err error) bool {
+	_, ok := err.(Error)
+	if ok {
+		cors.logf("%v", err)
+		res := struct {
+			Message string `json:"message"`
+		}{
+			Message: "CORS error: " + err.Error(),
+		}
+		switch {
+		case errors.Is(err, &PreflightNotOptionMethodError{}):
+			fallthrough
+		case errors.Is(err, &PreflightNotAllowedMethodError{}):
+			fallthrough
+		case errors.Is(err, &ActualMethodNotAllowedError{}):
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		default:
+			w.WriteHeader(http.StatusForbidden)
+		}
+		if err := json.NewEncoder(w).Encode(res); err != nil {
+			cors.logf("CORS error encoding failed: %v", err)
+		}
+		return false
+	}
+	res := struct {
+		Message string `json:"message"`
+	}{
+		Message: "CORS error: An unexpected error has occurred",
+	}
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		cors.logf("CORS error encoding failed: %v", err)
+	}
+	return false
+}
+
 func TestSpec(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -45,6 +82,7 @@ func TestSpec(t *testing.T) {
 		method     string
 		reqHeaders map[string]string
 		resHeaders map[string]string
+		resCode    int
 	}{
 		{
 			"NoConfig",
@@ -56,6 +94,19 @@ func TestSpec(t *testing.T) {
 			map[string]string{
 				"Vary": "Origin",
 			},
+			http.StatusOK,
+		},
+		{
+			"OnlyCustomErrorHandler",
+			Options{
+				ErrorHandler: customErrorHandler,
+			},
+			"GET",
+			map[string]string{},
+			map[string]string{
+				"Vary": "Origin",
+			},
+			http.StatusForbidden,
 		},
 		{
 			"MatchAllOrigin",
@@ -70,6 +121,23 @@ func TestSpec(t *testing.T) {
 				"Vary":                        "Origin",
 				"Access-Control-Allow-Origin": "*",
 			},
+			http.StatusOK,
+		},
+		{
+			"MatchAllOriginWithCustomErrorHandler",
+			Options{
+				AllowedOrigins: []string{"*"},
+				ErrorHandler:   customErrorHandler,
+			},
+			"GET",
+			map[string]string{
+				"Origin": "http://foobar.com",
+			},
+			map[string]string{
+				"Vary":                        "Origin",
+				"Access-Control-Allow-Origin": "*",
+			},
+			http.StatusOK,
 		},
 		{
 			"MatchAllOriginWithCredentials",
@@ -86,6 +154,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Origin":      "*",
 				"Access-Control-Allow-Credentials": "true",
 			},
+			http.StatusOK,
 		},
 		{
 			"AllowedOrigin",
@@ -100,6 +169,7 @@ func TestSpec(t *testing.T) {
 				"Vary":                        "Origin",
 				"Access-Control-Allow-Origin": "http://foobar.com",
 			},
+			http.StatusOK,
 		},
 		{
 			"WildcardOrigin",
@@ -114,6 +184,7 @@ func TestSpec(t *testing.T) {
 				"Vary":                        "Origin",
 				"Access-Control-Allow-Origin": "http://foo.bar.com",
 			},
+			http.StatusOK,
 		},
 		{
 			"DisallowedOrigin",
@@ -127,6 +198,22 @@ func TestSpec(t *testing.T) {
 			map[string]string{
 				"Vary": "Origin",
 			},
+			http.StatusOK,
+		},
+		{
+			"DisallowedOriginWithCustomErrorHandler",
+			Options{
+				AllowedOrigins: []string{"http://foobar.com"},
+				ErrorHandler:   customErrorHandler,
+			},
+			"GET",
+			map[string]string{
+				"Origin": "http://barbaz.com",
+			},
+			map[string]string{
+				"Vary": "Origin",
+			},
+			http.StatusForbidden,
 		},
 		{
 			"DisallowedWildcardOrigin",
@@ -140,6 +227,7 @@ func TestSpec(t *testing.T) {
 			map[string]string{
 				"Vary": "Origin",
 			},
+			http.StatusOK,
 		},
 		{
 			"AllowedOriginFuncMatch",
@@ -157,6 +245,7 @@ func TestSpec(t *testing.T) {
 				"Vary":                        "Origin",
 				"Access-Control-Allow-Origin": "http://foobar.com",
 			},
+			http.StatusOK,
 		},
 		{
 			"AllowOriginFuncNotMatch",
@@ -173,6 +262,7 @@ func TestSpec(t *testing.T) {
 			map[string]string{
 				"Vary": "Origin",
 			},
+			http.StatusOK,
 		},
 		{
 			"MaxAge",
@@ -192,6 +282,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Methods": "GET",
 				"Access-Control-Max-Age":       "10",
 			},
+			http.StatusOK,
 		},
 		{
 			"AllowedMethod",
@@ -209,6 +300,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Origin":  "http://foobar.com",
 				"Access-Control-Allow-Methods": "PUT",
 			},
+			http.StatusOK,
 		},
 		{
 			"DisallowedMethod",
@@ -224,6 +316,24 @@ func TestSpec(t *testing.T) {
 			map[string]string{
 				"Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
 			},
+			http.StatusOK,
+		},
+		{
+			"DisallowedMethodWithCustomErrorHandler",
+			Options{
+				AllowedOrigins: []string{"http://foobar.com"},
+				AllowedMethods: []string{"PUT", "DELETE"},
+				ErrorHandler:   customErrorHandler,
+			},
+			"OPTIONS",
+			map[string]string{
+				"Origin":                        "http://foobar.com",
+				"Access-Control-Request-Method": "PATCH",
+			},
+			map[string]string{
+				"Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+			},
+			http.StatusMethodNotAllowed,
 		},
 		{
 			"AllowedHeaders",
@@ -243,6 +353,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Methods": "GET",
 				"Access-Control-Allow-Headers": "X-Header-2, X-Header-1",
 			},
+			http.StatusOK,
 		},
 		{
 			"DefaultAllowedHeaders",
@@ -262,6 +373,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Methods": "GET",
 				"Access-Control-Allow-Headers": "Content-Type",
 			},
+			http.StatusOK,
 		},
 		{
 			"AllowedWildcardHeader",
@@ -281,6 +393,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Methods": "GET",
 				"Access-Control-Allow-Headers": "X-Header-2, X-Header-1",
 			},
+			http.StatusOK,
 		},
 		{
 			"DisallowedHeader",
@@ -297,6 +410,7 @@ func TestSpec(t *testing.T) {
 			map[string]string{
 				"Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
 			},
+			http.StatusOK,
 		},
 		{
 			"OriginHeader",
@@ -315,6 +429,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Methods": "GET",
 				"Access-Control-Allow-Headers": "Origin",
 			},
+			http.StatusOK,
 		},
 		{
 			"ExposedHeader",
@@ -331,6 +446,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Origin":   "http://foobar.com",
 				"Access-Control-Expose-Headers": "X-Header-1, X-Header-2",
 			},
+			http.StatusOK,
 		},
 		{
 			"AllowedCredentials",
@@ -349,6 +465,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Methods":     "GET",
 				"Access-Control-Allow-Credentials": "true",
 			},
+			http.StatusOK,
 		},
 		{
 			"OptionPassthrough",
@@ -365,6 +482,7 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Allow-Origin":  "*",
 				"Access-Control-Allow-Methods": "GET",
 			},
+			http.StatusOK,
 		},
 		{
 			"NonPreflightOptions",
@@ -379,6 +497,7 @@ func TestSpec(t *testing.T) {
 				"Vary":                        "Origin",
 				"Access-Control-Allow-Origin": "http://foobar.com",
 			},
+			http.StatusOK,
 		},
 	}
 	for i := range cases {
@@ -395,6 +514,7 @@ func TestSpec(t *testing.T) {
 				res := httptest.NewRecorder()
 				s.Handler(testHandler).ServeHTTP(res, req)
 				assertHeaders(t, res.Header(), tc.resHeaders)
+				assertResponse(t, res, tc.resCode)
 			})
 		})
 	}
@@ -424,6 +544,9 @@ func TestDefault(t *testing.T) {
 	if s.allowedMethods == nil {
 		t.Error("c.allowedMethods must not be nil when Default")
 	}
+	if s.errorHandler == nil {
+		t.Error("c.errorHandler must not be nil when Default")
+	}
 }
 
 func TestHandlePreflightInvalidOriginAbortion(t *testing.T) {
@@ -441,6 +564,23 @@ func TestHandlePreflightInvalidOriginAbortion(t *testing.T) {
 	})
 }
 
+func TestHandlePreflightInvalidOriginAbortionWithErrorHandler(t *testing.T) {
+	s := New(Options{
+		AllowedOrigins: []string{"http://foo.com"},
+		ErrorHandler:   customErrorHandler,
+	})
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("OPTIONS", "http://example.com/foo", nil)
+	req.Header.Add("Origin", "http://example.com/")
+
+	s.handlePreflight(res, req)
+
+	assertHeaders(t, res.Header(), map[string]string{
+		"Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+	})
+	assertResponse(t, res, http.StatusForbidden)
+}
+
 func TestHandlePreflightNoOptionsAbortion(t *testing.T) {
 	s := New(Options{
 		// Intentionally left blank.
@@ -451,6 +591,19 @@ func TestHandlePreflightNoOptionsAbortion(t *testing.T) {
 	s.handlePreflight(res, req)
 
 	assertHeaders(t, res.Header(), map[string]string{})
+}
+
+func TestHandlePreflightOnlyErrorHandleOptionAbortion(t *testing.T) {
+	s := New(Options{
+		ErrorHandler: customErrorHandler,
+	})
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "http://example.com/foo", nil)
+
+	s.handlePreflight(res, req)
+
+	assertHeaders(t, res.Header(), map[string]string{})
+	assertResponse(t, res, http.StatusMethodNotAllowed)
 }
 
 func TestHandleActualRequestInvalidOriginAbortion(t *testing.T) {
@@ -468,6 +621,23 @@ func TestHandleActualRequestInvalidOriginAbortion(t *testing.T) {
 	})
 }
 
+func TestHandleActualRequestInvalidOriginAbortionWithErrorHandler(t *testing.T) {
+	s := New(Options{
+		AllowedOrigins: []string{"http://foo.com"},
+		ErrorHandler:   customErrorHandler,
+	})
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "http://example.com/foo", nil)
+	req.Header.Add("Origin", "http://example.com/")
+
+	s.handleActualRequest(res, req)
+
+	assertHeaders(t, res.Header(), map[string]string{
+		"Vary": "Origin",
+	})
+	assertResponse(t, res, http.StatusForbidden)
+}
+
 func TestHandleActualRequestInvalidMethodAbortion(t *testing.T) {
 	s := New(Options{
 		AllowedMethods:   []string{"POST"},
@@ -482,6 +652,24 @@ func TestHandleActualRequestInvalidMethodAbortion(t *testing.T) {
 	assertHeaders(t, res.Header(), map[string]string{
 		"Vary": "Origin",
 	})
+}
+
+func TestHandleActualRequestInvalidMethodAbortionWithErrorHandler(t *testing.T) {
+	s := New(Options{
+		AllowedMethods:   []string{"POST"},
+		AllowCredentials: true,
+		ErrorHandler:     customErrorHandler,
+	})
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "http://example.com/foo", nil)
+	req.Header.Add("Origin", "http://example.com/")
+
+	s.handleActualRequest(res, req)
+
+	assertHeaders(t, res.Header(), map[string]string{
+		"Vary": "Origin",
+	})
+	assertResponse(t, res, http.StatusMethodNotAllowed)
 }
 
 func TestIsMethodAllowedReturnsFalseWithNoMethods(t *testing.T) {
