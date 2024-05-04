@@ -419,10 +419,10 @@ func TestDefault(t *testing.T) {
 		t.Error("c.allowedOriginsAll should be true when Default")
 	}
 	if s.allowedHeaders == nil {
-		t.Error("c.allowedHeaders should be nil when Default")
+		t.Error("c.allowedHeaders must not be nil when Default")
 	}
 	if s.allowedMethods == nil {
-		t.Error("c.allowedMethods should be nil when Default")
+		t.Error("c.allowedMethods must not be nil when Default")
 	}
 }
 
