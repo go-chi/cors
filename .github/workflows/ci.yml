@@ -4,7 +4,6 @@ jobs:
   test:
     env:
       GOPATH: ${{ github.workspace }}
-      GO111MODULE: off
 
     defaults:
       run:
