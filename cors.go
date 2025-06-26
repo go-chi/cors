@@ -3,15 +3,15 @@
 //
 // You can configure it by passing an option struct to cors.New:
 //
-//     c := cors.New(cors.Options{
-//         AllowedOrigins: []string{"foo.com"},
-//         AllowedMethods: []string{"GET", "POST", "DELETE"},
-//         AllowCredentials: true,
-//     })
+//	c := cors.New(cors.Options{
+//	    AllowedOrigins: []string{"foo.com"},
+//	    AllowedMethods: []string{"GET", "POST", "DELETE"},
+//	    AllowCredentials: true,
+//	})
 //
 // Then insert the handler in the chain:
 //
-//     handler = c.Handler(handler)
+//	handler = c.Handler(handler)
 //
 // See Options documentation for more options.
 //
@@ -210,7 +210,7 @@ func AllowAll() *Cors {
 // as necessary.
 func (c *Cors) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" && r.Header.Get("Origin") != "" {
 			c.logf("Handler: Preflight request")
 			c.handlePreflight(w, r)
 			// Preflight requests are standalone and should stop the chain as some other
