@@ -1,6 +1,11 @@
 package cors
 
-import "strings"
+import (
+	"net/http"
+	"strings"
+
+	"github.com/scylladb/go-set/strset"
+)
 
 const toLower = 'a' - 'A'
 
@@ -25,7 +30,7 @@ func convert(s []string, c converter) []string {
 }
 
 // parseHeaderList tokenize + normalize a string containing a list of headers
-func parseHeaderList(headerList string) []string {
+func parseHeaderList(headerList string) *strset.Set {
 	l := len(headerList)
 	h := make([]byte, 0, l)
 	upper := true
@@ -36,7 +41,7 @@ func parseHeaderList(headerList string) []string {
 			t++
 		}
 	}
-	headers := make([]string, 0, t)
+	headers := strset.NewWithSize(t)
 	for i := 0; i < l; i++ {
 		b := headerList[i]
 		if b >= 'a' && b <= 'z' {
@@ -58,7 +63,7 @@ func parseHeaderList(headerList string) []string {
 		if b == ' ' || b == ',' || i == l-1 {
 			if len(h) > 0 {
 				// Flush the found header
-				headers = append(headers, string(h))
+				headers.Add(http.CanonicalHeaderKey(string(h)))
 				h = h[:0]
 				upper = true
 			}

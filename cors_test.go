@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/scylladb/go-set/strset"
 )
 
 var testHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -488,7 +490,7 @@ func TestIsMethodAllowedReturnsFalseWithNoMethods(t *testing.T) {
 	s := New(Options{
 		// Intentionally left blank.
 	})
-	s.allowedMethods = []string{}
+	s.allowedMethods = strset.New()
 	if s.isMethodAllowed("") {
 		t.Error("IsMethodAllowed should return false when c.allowedMethods is nil.")
 	}
