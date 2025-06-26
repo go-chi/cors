@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 
@@ -28,6 +29,15 @@ func assertHeaders(t *testing.T, resHeaders http.Header, expHeaders map[string]s
 	for _, name := range allHeaders {
 		got := strings.Join(resHeaders[name], ", ")
 		want := expHeaders[name]
+		if name == "Access-Control-Allow-Headers" || name == "Access-Control-Expose-Headers" {
+			gSplit := strings.Split(got, ", ")
+			sort.Strings(gSplit)
+			got = strings.Join(gSplit, ", ")
+
+			wSplit := strings.Split(want, ", ")
+			sort.Strings(wSplit)
+			want = strings.Join(wSplit, ", ")
+		}
 		if got != want {
 			t.Errorf("Response header %q = %q, want %q", name, got, want)
 		}
