@@ -3,6 +3,8 @@ package cors
 import (
 	"strings"
 	"testing"
+
+	"github.com/scylladb/go-set/strset"
 )
 
 func TestWildcard(t *testing.T) {
@@ -33,17 +35,17 @@ func TestConvert(t *testing.T) {
 
 func TestParseHeaderList(t *testing.T) {
 	h := parseHeaderList("header, second-header, THIRD-HEADER, Numb3r3d-H34d3r, Header_with_underscore Header.with.full.stop")
-	e := []string{"Header", "Second-Header", "Third-Header", "Numb3r3d-H34d3r", "Header_with_underscore", "Header.with.full.stop"}
-	if h[0] != e[0] || h[1] != e[1] || h[2] != e[2] || h[3] != e[3] || h[4] != e[4] || h[5] != e[5] {
+	e := strset.New("Header", "Second-Header", "Third-Header", "Numb3r3d-H34d3r", "Header_with_underscore", "Header.with.full.stop")
+	if !h.IsEqual(h) {
 		t.Errorf("%v != %v", h, e)
 	}
 }
 
 func TestParseHeaderListEmpty(t *testing.T) {
-	if len(parseHeaderList("")) != 0 {
+	if !parseHeaderList("").IsEmpty() {
 		t.Error("should be empty slice")
 	}
-	if len(parseHeaderList(" , ")) != 0 {
+	if !parseHeaderList(" , ").IsEmpty() {
 		t.Error("should be empty slice")
 	}
 }
