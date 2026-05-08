@@ -176,7 +176,7 @@ func New(options Options) *Cors {
 		// Default is spec's "simple" methods
 		c.allowedMethods = []string{http.MethodGet, http.MethodPost, http.MethodHead}
 	} else {
-		c.allowedMethods = convert(options.AllowedMethods, strings.ToUpper)
+		c.allowedMethods = append([]string{}, options.AllowedMethods...)
 	}
 
 	return c
@@ -271,7 +271,13 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	}
 	// Spec says: Since the list of methods can be unbounded, simply returning the method indicated
 	// by Access-Control-Request-Method (if supported) can be enough
-	headers.Set("Access-Control-Allow-Methods", strings.ToUpper(reqMethod))
+	// Return the method in the case configured by the user, not uppercased
+	for _, m := range c.allowedMethods {
+		if strings.EqualFold(m, reqMethod) {
+			headers.Set("Access-Control-Allow-Methods", m)
+			break
+		}
+	}
 	if len(reqHeaders) > 0 {
 
 		// Spec says: Since the list of headers can be unbounded, simply returning supported headers
@@ -366,13 +372,12 @@ func (c *Cors) isMethodAllowed(method string) bool {
 		// If no method allowed, always return false, even for preflight request
 		return false
 	}
-	method = strings.ToUpper(method)
-	if method == http.MethodOptions {
+	if strings.EqualFold(method, http.MethodOptions) {
 		// Always allow preflight requests
 		return true
 	}
 	for _, m := range c.allowedMethods {
-		if m == method {
+		if strings.EqualFold(m, method) {
 			return true
 		}
 	}
