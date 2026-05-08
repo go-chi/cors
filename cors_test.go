@@ -502,3 +502,26 @@ func TestIsMethodAllowedReturnsTrueWithOptions(t *testing.T) {
 		t.Error("IsMethodAllowed should return true when c.allowedMethods is nil.")
 	}
 }
+
+func TestHandlePreflightLowercaseAllowedMethod(t *testing.T) {
+	const (
+		origin = "https://foo.com"
+		method = "patch"
+	)
+	c := New(Options{
+		AllowedOrigins: []string{origin},
+		AllowedMethods: []string{method},
+	})
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodOptions, "http://example.com/foo", nil)
+	req.Header.Add("Origin", origin)
+	req.Header.Add("Access-Control-Request-Method", method)
+
+	c.handlePreflight(res, req)
+
+	assertHeaders(t, res.Result().Header, map[string]string{
+		"Vary":                         "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+		"Access-Control-Allow-Origin":  origin,
+		"Access-Control-Allow-Methods": method,
+	})
+}
