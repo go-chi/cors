@@ -376,6 +376,20 @@ func TestSpec(t *testing.T) {
 				"Origin": "http://foobar.com",
 			},
 			map[string]string{
+				"Vary": "Origin",
+			},
+		},
+		{
+			"NonPreflightOptionsAllowed",
+			Options{
+				AllowedOrigins: []string{"http://foobar.com"},
+				AllowedMethods: []string{"GET", "OPTIONS"},
+			},
+			"OPTIONS",
+			map[string]string{
+				"Origin": "http://foobar.com",
+			},
+			map[string]string{
 				"Vary":                        "Origin",
 				"Access-Control-Allow-Origin": "http://foobar.com",
 			},
@@ -494,11 +508,20 @@ func TestIsMethodAllowedReturnsFalseWithNoMethods(t *testing.T) {
 	}
 }
 
-func TestIsMethodAllowedReturnsTrueWithOptions(t *testing.T) {
+func TestIsMethodAllowedRejectsOptionsByDefault(t *testing.T) {
 	s := New(Options{
-		// Intentionally left blank.
+		// Default methods: GET, POST, HEAD — OPTIONS not included
+	})
+	if s.isMethodAllowed("OPTIONS") {
+		t.Error("IsMethodAllowed should return false for OPTIONS when not in AllowedMethods.")
+	}
+}
+
+func TestIsMethodAllowedAllowsOptionsWhenExplicit(t *testing.T) {
+	s := New(Options{
+		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
 	})
 	if !s.isMethodAllowed("OPTIONS") {
-		t.Error("IsMethodAllowed should return true when c.allowedMethods is nil.")
+		t.Error("IsMethodAllowed should return true for OPTIONS when explicitly in AllowedMethods.")
 	}
 }
