@@ -5,7 +5,7 @@ provides a `net/http` compatible middleware for performing preflight CORS checks
 are required for using the browser native [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
 
 This middleware is designed to be used as a top-level middleware on the [chi](https://github.com/go-chi/chi) router.
-Applying with within a `r.Group()` or using `With()` will not work without routes matching `OPTIONS` added.
+Applying within a `r.Group()` or using `With()` will not work without routes matching `OPTIONS` added.
 
 ## Install
 
