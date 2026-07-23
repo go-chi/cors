@@ -138,7 +138,10 @@ func New(options Options) *Cors {
 		c.allowedWOrigins = []wildcard{}
 		for _, origin := range options.AllowedOrigins {
 			// Normalize
-			origin = strings.ToLower(origin)
+			origin = strings.ToLower(strings.TrimSpace(origin))
+			if origin == "" {
+				continue
+			}
 			if origin == "*" {
 				// If "*" is present in the list, turn the whole list into a match all
 				c.allowedOriginsAll = true
