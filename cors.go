@@ -1,4 +1,4 @@
-// cors package is net/http handler to handle CORS related requests
+// Package cors is a net/http handler to handle CORS related requests
 // as defined by http://www.w3.org/TR/cors/
 //
 // You can configure it by passing an option struct to cors.New:
@@ -33,7 +33,7 @@ type Options struct {
 	// An origin may contain a wildcard (*) to replace 0 or more characters
 	// (i.e.: http://*.domain.com). Usage of wildcards implies a small performance penalty.
 	// Only one wildcard can be used per origin.
-	// Default value is ["*"]
+	// Default value is ["*"].
 	AllowedOrigins []string
 
 	// AllowOriginFunc is a custom function to validate the origin. It takes the origin
@@ -45,14 +45,14 @@ type Options struct {
 	// cross-domain requests. Default value is simple methods (HEAD, GET and POST).
 	AllowedMethods []string
 
-	// AllowedHeaders is list of non simple headers the client is allowed to use with
+	// AllowedHeaders is a list of non simple headers the client is allowed to use with
 	// cross-domain requests.
 	// If the special "*" value is present in the list, all headers will be allowed.
 	// Default value is [] but "Origin" is always appended to the list.
 	AllowedHeaders []string
 
 	// ExposedHeaders indicates which headers are safe to expose to the API of a CORS
-	// API specification
+	// API specification.
 	ExposedHeaders []string
 
 	// AllowCredentials indicates whether the request can include user credentials like
@@ -60,23 +60,23 @@ type Options struct {
 	AllowCredentials bool
 
 	// MaxAge indicates how long (in seconds) the results of a preflight request
-	// can be cached
+	// can be cached.
 	MaxAge int
 
 	// OptionsPassthrough instructs preflight to let other potential next handlers to
 	// process the OPTIONS method. Turn this on if your application handles OPTIONS.
 	OptionsPassthrough bool
 
-	// Debugging flag adds additional output to debug server side CORS issues
+	// Debug adds additional output to debug server side CORS issues.
 	Debug bool
 }
 
-// Logger generic interface for logger
+// Logger is a generic interface for a logger.
 type Logger interface {
 	Printf(string, ...interface{})
 }
 
-// Cors http handler
+// Cors is a net/http handler to handle CORS requests.
 type Cors struct {
 	// Debug logger
 	Log Logger
