@@ -310,6 +310,22 @@ func TestSpec(t *testing.T) {
 				"Access-Control-Request-Headers": "origin",
 			},
 			map[string]string{
+				"Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+			},
+		},
+		{
+			"OriginHeaderExplicit",
+			Options{
+				AllowedOrigins: []string{"http://foobar.com"},
+				AllowedHeaders: []string{"Origin"},
+			},
+			"OPTIONS",
+			map[string]string{
+				"Origin":                         "http://foobar.com",
+				"Access-Control-Request-Method":  "GET",
+				"Access-Control-Request-Headers": "origin",
+			},
+			map[string]string{
 				"Vary":                         "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
 				"Access-Control-Allow-Origin":  "http://foobar.com",
 				"Access-Control-Allow-Methods": "GET",

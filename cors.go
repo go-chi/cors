@@ -48,7 +48,8 @@ type Options struct {
 	// AllowedHeaders is list of non simple headers the client is allowed to use with
 	// cross-domain requests.
 	// If the special "*" value is present in the list, all headers will be allowed.
-	// Default value is [] but "Origin" is always appended to the list.
+	// Default value is []string{"Accept", "Content-Type"}. Origin is a forbidden
+	// request header set by the user agent, so it is not listed or appended.
 	AllowedHeaders []string
 
 	// ExposedHeaders indicates which headers are safe to expose to the API of a CORS
@@ -157,11 +158,11 @@ func New(options Options) *Cors {
 
 	// Allowed Headers
 	if len(options.AllowedHeaders) == 0 {
-		// Use sensible defaults
-		c.allowedHeaders = []string{"Origin", "Accept", "Content-Type"}
+		// CORS-safelisted request headers. Origin is a forbidden request header
+		// set by the user agent, so listing it is never necessary.
+		c.allowedHeaders = []string{"Accept", "Content-Type"}
 	} else {
-		// Origin is always appended as some browsers will always request for this header at preflight
-		c.allowedHeaders = convert(append(options.AllowedHeaders, "Origin"), http.CanonicalHeaderKey)
+		c.allowedHeaders = convert(options.AllowedHeaders, http.CanonicalHeaderKey)
 		for _, h := range options.AllowedHeaders {
 			if h == "*" {
 				c.allowedHeadersAll = true
