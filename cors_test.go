@@ -426,6 +426,67 @@ func TestDefault(t *testing.T) {
 	}
 }
 
+func TestHandlePreflightACRHTooLong(t *testing.T) {
+	s := New(Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET"},
+		AllowedHeaders: []string{"*"},
+	})
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("OPTIONS", "http://example.com/foo", nil)
+	req.Header.Add("Origin", "http://foobar.com")
+	req.Header.Add("Access-Control-Request-Method", "GET")
+	req.Header.Add("Access-Control-Request-Headers", strings.Repeat(",", maxACRHBytes+1))
+
+	s.handlePreflight(res, req)
+
+	assertHeaders(t, res.Header(), map[string]string{
+		"Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+	})
+}
+
+func TestHandlePreflightACRHAtLimit(t *testing.T) {
+	s := New(Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET"},
+		AllowedHeaders: []string{"*"},
+	})
+	res := httptest.NewRecorder()
+	req, _ := http.NewRequest("OPTIONS", "http://example.com/foo", nil)
+	req.Header.Add("Origin", "http://foobar.com")
+	req.Header.Add("Access-Control-Request-Method", "GET")
+	// Exactly maxACRHBytes of a token — still parsed, not aborted.
+	req.Header.Add("Access-Control-Request-Headers", strings.Repeat("X", maxACRHBytes))
+
+	s.handlePreflight(res, req)
+
+	assertHeaders(t, res.Header(), map[string]string{
+		"Vary":                         "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+		"Access-Control-Allow-Origin":  "*",
+		"Access-Control-Allow-Methods": "GET",
+		"Access-Control-Allow-Headers": "X" + strings.Repeat("x", maxACRHBytes-1),
+	})
+}
+
+func BenchmarkPreflightAdversarialACRH(b *testing.B) {
+	handler := New(Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET"},
+		AllowedHeaders: []string{"*"},
+	}).Handler(testHandler)
+	acrh := strings.Repeat(",", 1<<20)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		res := httptest.NewRecorder()
+		req, _ := http.NewRequest("OPTIONS", "http://example.com/foo", nil)
+		req.Header.Add("Origin", "http://foobar.com")
+		req.Header.Add("Access-Control-Request-Method", "GET")
+		req.Header.Add("Access-Control-Request-Headers", acrh)
+		handler.ServeHTTP(res, req)
+	}
+}
+
 func TestHandlePreflightInvalidOriginAbortion(t *testing.T) {
 	s := New(Options{
 		AllowedOrigins: []string{"http://foo.com"},
