@@ -226,6 +226,38 @@ func TestSpec(t *testing.T) {
 			},
 		},
 		{
+			"AllowedMethodPreservesCase",
+			Options{
+				AllowedOrigins: []string{"http://foobar.com"},
+				AllowedMethods: []string{"patch"},
+			},
+			"OPTIONS",
+			map[string]string{
+				"Origin":                        "http://foobar.com",
+				"Access-Control-Request-Method": "patch",
+			},
+			map[string]string{
+				"Vary":                         "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+				"Access-Control-Allow-Origin":  "http://foobar.com",
+				"Access-Control-Allow-Methods": "patch",
+			},
+		},
+		{
+			"DisallowedMethodCaseMismatch",
+			Options{
+				AllowedOrigins: []string{"http://foobar.com"},
+				AllowedMethods: []string{"patch"},
+			},
+			"OPTIONS",
+			map[string]string{
+				"Origin":                        "http://foobar.com",
+				"Access-Control-Request-Method": "PATCH",
+			},
+			map[string]string{
+				"Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+			},
+		},
+		{
 			"AllowedHeaders",
 			Options{
 				AllowedOrigins: []string{"http://foobar.com"},
@@ -500,5 +532,17 @@ func TestIsMethodAllowedReturnsTrueWithOptions(t *testing.T) {
 	})
 	if !s.isMethodAllowed("OPTIONS") {
 		t.Error("IsMethodAllowed should return true when c.allowedMethods is nil.")
+	}
+}
+
+func TestIsMethodAllowedPreservesCase(t *testing.T) {
+	s := New(Options{
+		AllowedMethods: []string{"patch"},
+	})
+	if !s.isMethodAllowed("patch") {
+		t.Error("lowercase patch should be allowed when configured as patch")
+	}
+	if s.isMethodAllowed("PATCH") {
+		t.Error("PATCH should not match configured patch")
 	}
 }

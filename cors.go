@@ -124,8 +124,8 @@ func New(options Options) *Cors {
 	}
 
 	// Normalize options
-	// Note: for origins and methods matching, the spec requires a case-sensitive matching.
-	// As it may error prone, we chose to ignore the spec here.
+	// Origins are compared case-insensitively (host names). HTTP methods are
+	// case-sensitive; Fetch only uppercases DELETE/GET/HEAD/OPTIONS/POST/PUT.
 
 	// Allowed Origins
 	if len(options.AllowedOrigins) == 0 {
@@ -171,12 +171,13 @@ func New(options Options) *Cors {
 		}
 	}
 
-	// Allowed Methods
+	// Allowed Methods — keep caller spelling. Uppercasing "patch" to "PATCH"
+	// makes browsers reject preflight when Access-Control-Request-Method is "patch".
 	if len(options.AllowedMethods) == 0 {
 		// Default is spec's "simple" methods
 		c.allowedMethods = []string{http.MethodGet, http.MethodPost, http.MethodHead}
 	} else {
-		c.allowedMethods = convert(options.AllowedMethods, strings.ToUpper)
+		c.allowedMethods = append([]string(nil), options.AllowedMethods...)
 	}
 
 	return c
@@ -270,8 +271,9 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 		headers.Set("Access-Control-Allow-Origin", origin)
 	}
 	// Spec says: Since the list of methods can be unbounded, simply returning the method indicated
-	// by Access-Control-Request-Method (if supported) can be enough
-	headers.Set("Access-Control-Allow-Methods", strings.ToUpper(reqMethod))
+	// by Access-Control-Request-Method (if supported) can be enough.
+	// Echo the requested method as sent; methods are case-sensitive.
+	headers.Set("Access-Control-Allow-Methods", reqMethod)
 	if len(reqHeaders) > 0 {
 
 		// Spec says: Since the list of headers can be unbounded, simply returning supported headers
@@ -366,7 +368,6 @@ func (c *Cors) isMethodAllowed(method string) bool {
 		// If no method allowed, always return false, even for preflight request
 		return false
 	}
-	method = strings.ToUpper(method)
 	if method == http.MethodOptions {
 		// Always allow preflight requests
 		return true
