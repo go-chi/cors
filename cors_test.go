@@ -12,6 +12,63 @@ var testHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	w.Write([]byte("bar"))
 })
 
+func TestPreflightHeaderTokenPunctuation(t *testing.T) {
+	const origin = "https://example.com"
+	for _, mode := range []string{"explicit", "wildcard", "disallowed"} {
+		t.Run(mode, func(t *testing.T) {
+			allowedHeaders := []string{"Content-Type"}
+			for _, punctuation := range "!#$%&'*+-.^_`|~" {
+				allowedHeaders = append(allowedHeaders, "X"+string(punctuation)+"Custom")
+			}
+			if mode == "wildcard" {
+				allowedHeaders = []string{"*"}
+			} else if mode == "disallowed" {
+				allowedHeaders = []string{"Content-Type", "XCustom"}
+			}
+			server := httptest.NewServer(New(Options{
+				AllowedOrigins: []string{origin},
+				AllowedMethods: []string{http.MethodPost},
+				AllowedHeaders: allowedHeaders,
+			}).Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				t.Error("preflight reached the next handler")
+			})))
+			defer server.Close()
+
+			for _, punctuation := range "!#$%&'*+-.^_`|~" {
+				t.Run(string(punctuation), func(t *testing.T) {
+					name := "X" + string(punctuation) + "Custom"
+					request, err := http.NewRequest(http.MethodOptions, server.URL, nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+					request.Header.Set("Origin", origin)
+					request.Header.Set("Access-Control-Request-Method", http.MethodPost)
+					request.Header.Set("Access-Control-Request-Headers", "content-type, "+strings.ToLower(name))
+					response, err := server.Client().Do(request)
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer response.Body.Close()
+					if response.StatusCode != http.StatusOK {
+						t.Errorf("status = %d, want %d", response.StatusCode, http.StatusOK)
+					}
+					wantOrigin := origin
+					wantHeaders := "Content-Type, " + http.CanonicalHeaderKey(name)
+					if mode == "disallowed" {
+						wantOrigin, wantHeaders = "", ""
+					}
+					if got := response.Header.Get("Access-Control-Allow-Origin"); got != wantOrigin {
+						t.Errorf("allow origin = %q, want %q", got, wantOrigin)
+					}
+					if got := response.Header.Get("Access-Control-Allow-Headers"); got != wantHeaders {
+						t.Errorf("allow headers = %q, want %q", got, wantHeaders)
+					}
+				})
+			}
+		})
+	}
+}
+
 var allHeaders = []string{
 	"Vary",
 	"Access-Control-Allow-Origin",

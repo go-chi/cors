@@ -1,6 +1,8 @@
 package cors
 
 import (
+	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -45,6 +47,19 @@ func TestParseHeaderListEmpty(t *testing.T) {
 	}
 	if len(parseHeaderList(" , ")) != 0 {
 		t.Error("should be empty slice")
+	}
+}
+
+func TestParseHeaderListTokenPunctuation(t *testing.T) {
+	for _, punctuation := range "!#$%&'*+-.^_`|~" {
+		t.Run(string(punctuation), func(t *testing.T) {
+			name := "X" + string(punctuation) + "CuStOm"
+			got := parseHeaderList("before, " + name + ", after")
+			want := []string{"Before", http.CanonicalHeaderKey(name), "After"}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("parseHeaderList() = %q, want %q", got, want)
+			}
+		})
 	}
 }
 
