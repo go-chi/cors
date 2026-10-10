@@ -259,7 +259,23 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 		c.logf("Preflight aborted: method '%s' not allowed", reqMethod)
 		return
 	}
-	reqHeaders := parseHeaderList(r.Header.Get("Access-Control-Request-Headers"))
+
+	// We need to call Values func instead of Get because the header might
+	// be parsed/split before it reaches the handler. Calling "Get" will only
+	// return the first value This guarantees that we get all values of
+	// the header and maintains the original functionality.
+	headerVals := r.Header.Values("Access-Control-Request-Headers")
+
+	c.logf("Preflight access control request headers: %v", headerVals)
+
+	var reqHeaders []string
+
+	// loop over the header values and parse them; this will allow us to handle
+	// the case where it's a single comma separated header or multiple headers
+	for _, headerVal := range headerVals {
+		parsed := parseHeaderList(headerVal)
+		reqHeaders = append(reqHeaders, parsed...)
+	}
 	if !c.areHeadersAllowed(reqHeaders) {
 		c.logf("Preflight aborted: headers '%v' not allowed", reqHeaders)
 		return
