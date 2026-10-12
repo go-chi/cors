@@ -71,6 +71,11 @@ type Options struct {
 	Debug bool
 }
 
+// maxACRHBytes is the largest Access-Control-Request-Headers value we parse.
+// Fetch preflights send a short list of header names; anything larger is a
+// spoofed request used to inflate parseHeaderList allocations (see #36).
+const maxACRHBytes = 1024
+
 // Logger generic interface for logger
 type Logger interface {
 	Printf(string, ...interface{})
@@ -259,7 +264,15 @@ func (c *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 		c.logf("Preflight aborted: method '%s' not allowed", reqMethod)
 		return
 	}
-	reqHeaders := parseHeaderList(r.Header.Get("Access-Control-Request-Headers"))
+	// Bound ACRH before parseHeaderList: a 1MiB comma-only value otherwise
+	// allocates on the order of tens of MiB (#36). 1KiB is enough for a
+	// browser preflight list; longer values are not from Fetch.
+	acrh := r.Header.Get("Access-Control-Request-Headers")
+	if len(acrh) > maxACRHBytes {
+		c.logf("Preflight aborted: Access-Control-Request-Headers too long")
+		return
+	}
+	reqHeaders := parseHeaderList(acrh)
 	if !c.areHeadersAllowed(reqHeaders) {
 		c.logf("Preflight aborted: headers '%v' not allowed", reqHeaders)
 		return
