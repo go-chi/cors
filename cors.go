@@ -367,10 +367,6 @@ func (c *Cors) isMethodAllowed(method string) bool {
 		return false
 	}
 	method = strings.ToUpper(method)
-	if method == http.MethodOptions {
-		// Always allow preflight requests
-		return true
-	}
 	for _, m := range c.allowedMethods {
 		if m == method {
 			return true
