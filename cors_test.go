@@ -547,7 +547,7 @@ func TestIsMethodAllowedReturnsFalseWithNoMethods(t *testing.T) {
 	})
 	s.allowedMethods = []string{}
 	if s.isMethodAllowed("") {
-		t.Error("IsMethodAllowed should return false when c.allowedMethods is nil.")
+		t.Error("IsMethodAllowed should return false when c.allowedMethods is empty.")
 	}
 }
 
@@ -556,6 +556,6 @@ func TestIsMethodAllowedReturnsTrueWithOptions(t *testing.T) {
 		// Intentionally left blank.
 	})
 	if !s.isMethodAllowed("OPTIONS") {
-		t.Error("IsMethodAllowed should return true when c.allowedMethods is nil.")
+		t.Error("IsMethodAllowed should return true when OPTIONS is requested with default options.")
 	}
 }
