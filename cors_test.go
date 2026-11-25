@@ -140,7 +140,7 @@ func TestSpec(t *testing.T) {
 			},
 			map[string]string{
 				"Vary":                             "Origin",
-				"Access-Control-Allow-Origin":      "*",
+				"Access-Control-Allow-Origin":      "http://foobar.com",
 				"Access-Control-Allow-Credentials": "true",
 			},
 		},
@@ -393,6 +393,24 @@ func TestSpec(t *testing.T) {
 			"AllowedCredentials",
 			Options{
 				AllowedOrigins:   []string{"http://foobar.com"},
+				AllowCredentials: true,
+			},
+			"OPTIONS",
+			map[string]string{
+				"Origin":                        "http://foobar.com",
+				"Access-Control-Request-Method": "GET",
+			},
+			map[string]string{
+				"Vary":                             "Origin, Access-Control-Request-Method, Access-Control-Request-Headers",
+				"Access-Control-Allow-Origin":      "http://foobar.com",
+				"Access-Control-Allow-Methods":     "GET",
+				"Access-Control-Allow-Credentials": "true",
+			},
+		},
+		{
+			"MatchAllOriginWithCredentialsPreflight",
+			Options{
+				AllowedOrigins:   []string{"*"},
 				AllowCredentials: true,
 			},
 			"OPTIONS",
